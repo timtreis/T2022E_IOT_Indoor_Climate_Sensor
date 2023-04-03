@@ -4,8 +4,8 @@
 
 // replace with your channel’s thingspeak API key and your SSID and password
 String apiKey = "LQOJHQX7GUOXXZTH";
-const char* ssid = "WiFi";
-const char* password = "KAX39HGERYXFHLYA";
+const char *ssid = "FRITZ!Box 7590 NT 2.4";
+const char *password = "25470496396785537215";
 const char* server = "api.thingspeak.com";
  
 #define DHT_PIN 12
@@ -61,11 +61,11 @@ void loop() {
 
       dht.begin();
       float humidity_values[20];
-      float temperature_values[20];
+      // float temperature_values[20];
 
       for (int i=0; i<20; i++) {
         humidity_values[i] = dht.readHumidity();
-        temperature_values[i] = dht.readTemperature();
+        // temperature_values[i] = dht.readTemperature();
         delay(200);
       }
 
@@ -74,11 +74,12 @@ void loop() {
 
       for (int i=10; i<20; i++) {
             h = h + humidity_values[i];
-            t = t + temperature_values[i];
+            // t = t + temperature_values[i];
       }
 
-      h = h/10;
-      t = t/10;
+      h = h / 10;
+      // t = t / 10;
+      t = 22.0;
 
       for (int i=0; i<500; i++) {
          // Preheat MQ135 Sensor
@@ -91,6 +92,10 @@ void loop() {
       float resistance_values[20];
       float ppm_values[20];
       float correctedPPM_values[20];
+      float rzero_avg = 0;
+      float correctedRZero_avg = 0;
+      float resistance_avg = 0;
+      float ppm_avg = 0;
       float p;
 
       for (int i=0; i<20; i++) {
@@ -99,14 +104,23 @@ void loop() {
          resistance_values[i] = mq135_sensor.getResistance();
          ppm_values[i] = mq135_sensor.getPPM();
          correctedPPM_values[i] = mq135_sensor.getCorrectedPPM(t, h);
-         delay(200);
+         delay(500);
       }
 
-      for (int i=10; i<20; i++) {
-            p = p + correctedPPM_values[i];
+      for (int i=0; i<20; i++) {
+         rzero_avg = rzero_avg + rzero_values[i];
+         correctedRZero_avg = correctedRZero_avg + correctedRZero_values[i];
+         resistance_avg = resistance_avg + resistance_values[i];
+         ppm_avg = ppm_avg + ppm_values[i];
+         p = p + correctedPPM_values[i];
       }
 
-      p = p/10;
+      rzero_avg = rzero_avg / 20;
+      correctedRZero_avg = correctedRZero_avg / 20;
+      resistance_avg = resistance_avg / 20;
+      ppm_avg = ppm_avg / 20;
+      Serial.println(p);
+      p = p / 20;
 
       if (isnan(h) || isnan(t) || isnan(p)) {
          Serial.println("Failed to read from DHT sensor!");
@@ -119,8 +133,16 @@ void loop() {
          postStr += String(t);
          postStr +="&field2=";
          postStr += String(h);
-         postStr +="&field3=";
+         postStr += "&field3=";
          postStr += String(p);
+         postStr += "&field4=";
+         postStr += String(rzero_avg);
+         postStr += "&field5=";
+         postStr += String(correctedRZero_avg);
+         postStr += "&field6=";
+         postStr += String(resistance_avg);
+         postStr += "&field7=";
+         postStr += String(ppm_avg);
          postStr += "\r\n\r\n";
          
          client.print("POST /update HTTP/1.1\n");
@@ -146,7 +168,7 @@ void loop() {
       }
 
       client.stop();
-      delay(300000);
+      delay(120000);
 
   }
 
